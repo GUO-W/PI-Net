@@ -28,11 +28,11 @@ data
 |-- MuCo
     |-- MuCo.py
     `-- data
-    |-- annotations
-        |-- MuCo-3DHP_with_posenent_result_filter.json
-        |-- MuCo_id2pairId.json
-        `-- split_gt.py
-'--MuPoTS_skeleton
+        |-- annotations
+            |-- MuCo-3DHP_with_posenent_result_filter.json
+            |-- MuCo_id2pairId.json
+            `-- split_gt.py
+|--MuPoTS_skeleton
     |-- MuPoTS_skeleton.py
     |-- bbox_root
     `-- data
