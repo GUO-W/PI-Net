@@ -1,9 +1,5 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
+# timer.py is derived from [fast-rcnn](https://github.com/rbgirshick/fast-rcnn.git)
+# distributed under MIT License (c) 2015 Ross Girshick.
 
 import time
 

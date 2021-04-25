@@ -1,3 +1,6 @@
+# logger.py is derived from [3DMPPE_POSENET_RELEASE](https://github.com/mks0601/3DMPPE_POSENET_RELEASE.git)
+# distributed under MIT License (c) 2019 Gyeongsik Moon.
+
 import logging
 import os
 

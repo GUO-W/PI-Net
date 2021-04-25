@@ -1,3 +1,6 @@
+# gr_utils.py is derived from [Torchseg](https://github.com/ycszen/TorchSeg.git)
+#distributed under MIT License (c) 2019 ycszen.
+
 # encoding: utf-8
 import os
 import sys

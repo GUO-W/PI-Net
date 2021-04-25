@@ -74,7 +74,7 @@ If you use our code, please cite our work
 
 
 ### Acknowledgments
-The overall code framework(dataloader, train, test, etc) is adapted from [3DMPPE](https://github.com/mks0601/3DMPPE_POSENET_RELEASE.git) and
+The overall code framework is adapted from [3DMPPE](https://github.com/mks0601/3DMPPE_POSENET_RELEASE.git) and
 [Torchseg](https://github.com/ycszen/TorchSeg.git).
 The predictor model code is adapted from [SeeWoLook](https://github.com/LourencoVazPato/seeing-without-looking.git).
 
