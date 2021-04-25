@@ -1,3 +1,12 @@
+##
+## Software PI-Net: Pose Interacting Network for Multi-Person Monocular 3D Pose Estimation
+## Copyright Inria and Polytechnic University of Catalonia  [to be checked] (do the other people you collaborate come from this university ?)
+## Year 2021
+## Contact : wen.guo@inria.fr
+##
+## The software PI-Net is provided under MIT License.
+##
+
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -17,24 +26,14 @@ class ContextualRescorer(nn.Module):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.num_layers = 3
         self.directions = 2
-        self.skip_connection = False
-        self.embedding_layer = False
         self.attention_type =  "general"
         self.loss_type = 'mse'
 
-        # Embedding layer
-        if self.embedding_layer:
-            self.embedding_size = params['embedding_size']
-            self.input_size = self.input_size - 80 + self.embedding_size
-            self.embedding = nn.Embedding(80, self.embedding_size)
-
-        # Initialize hidden vectors
         self.h0 = nn.Parameter(
             torch.zeros(self.num_layers * self.directions, 1, self.hidden_size),
             requires_grad=True,
         )
 
-        # Network layers
         self.rnn = nn.GRU(
             self.input_size,
             self.hidden_size,
@@ -48,11 +47,6 @@ class ContextualRescorer(nn.Module):
             layer_size = self.hidden_size * self.directions*2
         else:
             layer_size = self.hidden_size * self.directions
-
-        if self.skip_connection:
-            layer_size = layer_size + self.input_size
-
-        #print("...layersize:", layer_size)
         self.linear1 = nn.Linear(layer_size, 256) #conv1d
         self.linear2 = nn.Linear(256, 128)
         self.linear3 = nn.Linear(128, 17*3, bias=False)
@@ -60,17 +54,13 @@ class ContextualRescorer(nn.Module):
         self.b2 = nn.LayerNorm(256, elementwise_affine=True)
         self.b3 = nn.LayerNorm(128, elementwise_affine=True)
         self.relu = nn.ReLU()
-
-        # Attention layers
-        if self.attention_type == "general":
-            self.Wa = nn.Linear(self.hidden_size * self.directions, self.hidden_size * self.directions, bias=True)
+        self.Wa = nn.Linear(self.hidden_size * self.directions, self.hidden_size * self.directions, bias=True)
 
     def init_hidden(self, batch_size=1):
         h0 = self.h0.repeat(1, batch_size, 1)
         return h0
 
     def forward(self, input_, lengths, target=None): #lengths = tensor of nb_instances/img in one batch  #, lengths, mask):
-
         n = lengths.max() # n = patched nb of person in one img / patch
 
         eps = torch.ones(1) * 1e-4
@@ -81,16 +71,7 @@ class ContextualRescorer(nn.Module):
 
         # b * (17*n) * 3 -> b * n * 51
         input_ = torch.reshape(input_, (-1, n, 51))
-
         batch_size, _, _ = input_.size()
-
-        ### Embedding layer (F)
-        if self.embedding_layer:
-            cat = input_[:, :, 1:81].argmax(dim=2)
-            embeddings = self.embedding(cat)
-            scores = input_[:, :, :1]
-            bbox = input_[:, :, -4:]
-            input_ = torch.cat((scores, embeddings, bbox), dim=2)
 
         ### rnn
         h0 = self.init_hidden(batch_size=batch_size)
@@ -135,41 +116,24 @@ class ContextualRescorer(nn.Module):
 
 
     def classifier(self, hidden, context, input_):
-        if self.skip_connection:
-            if self.attention_type == "none":
-                hidden = torch.cat((hidden, input_), dim=2)
-            else:
-                hidden = torch.cat((hidden, context, input_), dim=2)
-        else:
-            if self.attention_type != "none":
-                hidden = torch.cat((hidden, context), dim=2)
+        hidden = torch.cat((hidden, context), dim=2)
 
         hidden = hidden.reshape(-1,512*2)
         hidden = self.b1(hidden)
         hidden = self.relu(self.linear1(hidden))
-
         hidden = self.b2(hidden)
         hidden = self.linear2(hidden)
-
         hidden = self.b3(hidden)
         hidden = self.linear3(hidden)
         return hidden
 
     def attention(self, hidden, mask=None):
         B, L, H = hidden.size()
-        if self.attention_type == 'general':
-            scores = self.general_attn(hidden)
-        else:
-            scores = self.scaled_dot_product_attn(hidden, mask)
+        hs = self.Wa(hidden)
+        scores = torch.bmm(hidden, hs.transpose(1, 2))
         alpha = torch.softmax(scores, dim=2)
         context = torch.bmm(alpha, hidden)
         return context,alpha
-
-
-    def general_attn(self, hidden):
-        hs = self.Wa(hidden)  # [B, L, H] * [., H, H]
-        scores = torch.bmm(hidden, hs.transpose(1, 2))  # [B, L, H] * [B, H, L]
-        return scores  # [B, L, L]
 
 if __name__ == '__main__':
     '''

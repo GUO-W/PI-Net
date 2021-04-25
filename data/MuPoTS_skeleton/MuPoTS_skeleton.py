@@ -1,4 +1,12 @@
-import os
+##
+## Software PI-Net: Pose Interacting Network for Multi-Person Monocular 3D Pose Estimation
+## Copyright Inria and Polytechnic University of Catalonia  [to be checked] (do the other people you collaborate come from this university ?)
+## Year 2021
+## Contact : wen.guo@inria.fr
+##
+## The software PI-Net is provided under MIT License.
+##
+
 import os.path as osp
 import scipy.io as sio
 import numpy as np
@@ -35,8 +43,8 @@ class MuPoTS_skeleton:
         self.data_split = data_split
         self.img_dir = osp.join(cfg.data_dir, 'MuPoTS_skeleton', 'data', 'MultiPersonTestSet')
 
-        self.train_annot_path = cfg.train_annot_path #osp.join('..', 'data', 'MuPoTS', 'data', 'annotations_crossval', 'mupots_crossval_train1.json')
-        self.val_annot_path = cfg.val_annot_path#osp.join('..', 'data', 'MuPoTS', 'data', 'annotations_crossval', 'mupots_crossval_val1.json')
+        self.train_annot_path = cfg.train_annot_path
+        self.val_annot_path = cfg.val_annot_path
         self.nb_test_seq = cfg.nb_test_seq
 
         self.human_bbox_root_dir = osp.join('..', 'data', 'MuPoTS_skeleton', 'bbox_root', 'bbox_root_mupots_output.json')#'bbox_root_mupots_gt.json')
@@ -50,22 +58,15 @@ class MuPoTS_skeleton:
         self.joints_have_depth = True
         self.root_idx = self.joints_name.index('Pelvis')
         self.is_val = is_val
-        self.pair_index_path = cfg.pair_index_path#osp.join('..', 'data', 'MuPoTS', 'data', 'MuPoTS-3D_id2pairId.json')
+        self.pair_index_path = cfg.pair_index_path
         self.data = self.load_data()
 
     def load_data(self):
-
-        #if self.data_split != 'test':
-        #    print('Unknown data subset')
-        #    assert 0
 
         if self.is_val:
             db = COCO(self.val_annot_path)
         else:
             db = COCO(self.train_annot_path)
-        #db = COCO(self.test_annot_path) #json
-
-        #print("...db len in mupots:", len(db.anns))
 
         id2pairId = json.load(open(self.pair_index_path,'r'))
 
@@ -75,11 +76,7 @@ class MuPoTS_skeleton:
             print("Get bounding box and root from groundtruth")
             n = 0
             for aid in db.anns.keys():
-                #print("aid:",aid)
                 ann = db.anns[aid]
-                #if ann['is_valid'] == 0:
-                #    print("...is valid")
-                #    continue
 
                 image_id = ann['image_id']
                 img = db.loadImgs(image_id)[0]
@@ -101,8 +98,6 @@ class MuPoTS_skeleton:
                 bbox = np.array(ann['bbox'])
                 img_width, img_height = img['width'], img['height']
 
-                # sanitize bboxes
-                #print("...bbox process")
                 x, y, w, h = bbox
                 center = [x+w/2, y+h/2]
                 x1 = np.max((0, x))
@@ -115,7 +110,6 @@ class MuPoTS_skeleton:
                     print("sanitize bboxes:",image_id)
                     continue
 
-                # aspect ratio preserving bbox
                 #bbox = larger_bbox(bbox)
 
                 n_copain = id2pairId[str(bbox_id)] - bbox_id + n # n_copain - n = id_copain - id
@@ -129,16 +123,8 @@ class MuPoTS_skeleton:
                     dis = math.sqrt((center[0] - center_cand[0])**2 + (center[1] - center_cand[1])**2)
                     dis2id[dis] = cand_id
                 id_list_sorted = [dis2id[k] for k in sorted(dis2id.keys())]
-                #print("...132:", [(dis2id[k], k)for k in sorted(dis2id.keys())])
-                #n_list = id_list_sorted - bbox_id + n
                 for cand_id in id_list_sorted:
                     n_list.append(cand_id - bbox_id + n)
-                #print("...136 n_list:", n_list)
-                # random noise
-                #noise = ann['noise']#[noise1, noise2]
-
-                #if image_id == 2329:
-                #    print("...2329 noise:",image_id, noise)
 
                 data.append({
                     'img_id': image_id,
@@ -154,8 +140,7 @@ class MuPoTS_skeleton:
                     'root_cam': root_cam, # [X, Y, Z] in camera coordinate
                     'f': f,
                     'c': c,
-                    'joint_cam_posenet': joint_cam_posenet, # result from posenet_nonefine
-                    #'noise': noise,
+                    'joint_cam_posenet': joint_cam_posenet,
                 })
                 n = n + 1
 
@@ -174,18 +159,6 @@ class MuPoTS_skeleton:
                 root_cam = np.array(annot[i]['root_cam']).reshape(3)
                 bbox = np.array(annot[i]['bbox']).reshape(4)
 
-                '''
-                ### vis img and bbox
-                #img_folder = '/local_scratch/wguo/repos/GraphRefineNet/gr-net/data/MuPoTS/MultiPersonTestSet/'
-                print("...img_path",img_path)
-                #id2path = json.load(open('/local_scratch/wguo/repos/GraphRefineNet/gr-net/data/MuPoTS/annotations_match/id2filename.json','r'))
-                #img_path = img_folder + id2path[str(anno['image_id'])]
-                img = cv.imread(img_path)
-                bbox = [int(i) for i in bbox]
-                img_crop = img[bbox[1]:bbox[3]+bbox[1],bbox[0]:bbox[2]+bbox[0]]
-                cv.imwrite( 'vis_' + str(i) + '.png', img_crop)
-                '''
-
                 data.append({
                     'img_id': image_id,
                     'img_path': img_path,
@@ -200,185 +173,11 @@ class MuPoTS_skeleton:
 
         return data
 
-
-
-    def evaluate_cam(self, preds, preds_copain=None, save_mat_result=False):
-        # test for cam output
-        # the only useful evaluate file here(_skeleton)
-        # used in traintest.py, test.py(save_mat_result=True)
-
-        #print('Evaluation start...')
-        gts = self.load_data()#self.data
-        sample_num = len(preds)
-        joint_num = self.original_joint_num
-
-        pred_3d_per_bbox = {}
-        pred_2d_save = {}
-        pred_3d_save = {}
-        #pred_3d_save_tmp = {}
-
-        for n in range(sample_num):
-            gt = gts[n]
-            bbox = gt['bbox']
-            gt_3d_root = gt['root_cam']
-            bbox_id = gt['id']
-            #if bbox_id != n:
-            #    print("...error: bbox_id is not n")
-
-            # restore coordinates to original space
-            pred_3d_kpt = preds[n].copy()
-
-            if str(n) in pred_3d_per_bbox:
-                pred_3d_per_bbox[str(n)].append(pred_3d_kpt)
-            else:
-                pred_3d_per_bbox[str(n)] = [pred_3d_kpt]
-
-            ### COPAIN ###
-            if preds_copain is not None:
-
-                n_copain = gt['n_copain']#id2pairId[str(n)]
-                #print("...pair:",n, n_copain)
-                gt_copain = gts[n_copain]
-                bbox_copain = gt_copain['bbox']
-                gt_3d_root_copain = gt_copain['root_cam']
-                bbox_id_copain = gt_copain['id']
-                # restore coordinates to original space
-                pred_3d_kpt_copain = preds_copain[n].copy()
-
-                if str(n_copain) in pred_3d_per_bbox:
-                    pred_3d_per_bbox[str(n_copain)].append(pred_3d_kpt_copain)
-                else:
-                    pred_3d_per_bbox[str(n_copain)] = [pred_3d_kpt_copain]
-
-        error = np.zeros((sample_num, self.original_joint_num)) # joint error
-        error_pa = np.zeros((sample_num, self.original_joint_num))
-        error_seq = {}#[ [] for _ in range(self.nb_test_seq) ] # error for each sequence
-        error_seq_pa = {}#[ [] for _ in range(self.nb_test_seq) ]
-        for n in range(sample_num):
-            gt = gts[n]
-            f = gt['f']
-            c = gt['c']
-            bbox = gt['bbox']
-            gt_3d_root = gt['root_cam']
-            gt_3d_kpt = gt['joint_cam']
-            #gt_3d_kpt_trans = trans2cam(gt['joint_img'],bbox,gt_3d_root,f,c)
-            #print('...mupots480:',gt['joint_cam'], gt['joint_img'], gt_3d_kpt_trans)
-            gt_vis = gt['joint_vis']
-            bbox_id = gt['id']
-            img_name = gt['img_path'].split('/')
-            img_name = img_name[-2] + '_' + img_name[-1].split('.')[0] # e.g., TS1_img_0001 orig gt 'file_name':TS1/img_0001.jpg
-
-            pred_3d_kpt = pred_3d_per_bbox[str(n)].copy()
-            pred_3d_kpt = np.mean(np.array(pred_3d_kpt), axis=0)#np.mean(pred_2d_kpt)
-
-            pred_2d_kpt = cam2pixel(pred_3d_kpt, f, c)
-
-            # save pred result
-            if img_name in pred_2d_save:
-                pred_2d_save[img_name].append(pred_2d_kpt[:,:2])
-                pred_3d_save[img_name].append(pred_3d_kpt)
-            else:
-                pred_2d_save[img_name] = [pred_2d_kpt[:,:2]]
-                pred_3d_save[img_name] = [pred_3d_kpt]
-
-            ### calculate average error MPJPE & PA-MPJPE
-            # root joint alignment
-            pred_3d_kpt = pred_3d_kpt - pred_3d_kpt[self.root_idx]
-            gt_3d_kpt  = gt_3d_kpt - gt_3d_kpt[self.root_idx]
-            # rigid alignment for PA MPJPE (protocol #1)
-            pred_3d_kpt_pa = rigid_align(pred_3d_kpt, gt_3d_kpt)
-            # error calculate
-            error[n] = np.sqrt(np.sum((pred_3d_kpt - gt_3d_kpt)**2,1))
-            error_pa[n] = np.sqrt(np.sum((pred_3d_kpt_pa - gt_3d_kpt)**2,1))
-            seq_idx = int(img_name[2:img_name.find('_')])
-            #print("...seq:",seq_idx)
-            if str(seq_idx) in error_seq:
-                error_seq[str(seq_idx)].append(error[n].copy())
-                error_seq_pa[str(seq_idx)].append(error_pa[n].copy())
-            else:
-                error_seq[str(seq_idx)] = [error[n].copy()]
-                error_seq_pa[str(seq_idx)] = [error_pa[n].copy()]
-            ### error per img
-            #if str(img_name) in error_img:
-            #    error_img[str(img_name)].append(error[n].copy())
-            #else:
-            #    error_img[str(img_name)].append(error[n].copy())
-        #for k in error_img:
-            #error_img[k] = np.mean(np.array(error_img[k]))
-        #import operator
-        #for i in range(20):
-        #     max_ = max(error_img.items(), key=operator.itemgetter(0))
-        #     print(max_)
-        #     error_img.pop(max_[0])
-        ###
-
-        # PAMPJPE
-        tot_err_pa = np.mean(error_pa)
-        eval_summary = 'Protocol 1' + ' error ( PA MPJPE) >> tot: %.2f\n' % (tot_err_pa)
-        for k in error_seq_pa:
-            err_pa = np.mean(np.array(error_seq_pa[k]))
-            eval_summary += ('TS' + k + ': %.2f ' % err_pa)
-        # MPJPE
-        tot_err = np.mean(error)
-        eval_summary += '\nProtocol 2' + ' error ( MPJPE) >> tot: %.2f\n' % (tot_err)
-        for k in error_seq:
-            err = np.mean(np.array(error_seq[k]))
-            eval_summary += ('TS' + k + ': %.2f ' % err)
-
-        print(eval_summary)
-
-
-        if not save_mat_result:
-            return tot_err, tot_err_pa
-        else:
-            ### save result in result_mpjpe_sequence.txt
-            result = 'pa mpjpe:\n'
-            for i in range(20):
-                ts = str(i+1)
-                error = np.mean(np.array(error_seq_pa[ts]))
-                result += (' %.2f \n' %error)
-            result = 'mpjpe:\n'
-            for i in range(20):
-                ts = str(i+1)
-                error = np.mean(np.array(error_seq[ts]))
-                result += (' %.2f \n' %error)
-            txt_path = osp.join(cfg.cur_dir, 'result_mpjpe_sequence.txt')
-            with open(txt_path, 'w') as w:
-                w.write(''.join(result))
-
-
-            ### prediction save for calculating pck
-            # merge blank seq
-            merge_2d = sio.loadmat('/local_scratch/wguo/repos/GraphRefineNet/gr-net/data/MuPoTS_skeleton/eval/eval_result/posenet02101043/preds_2d_kpt_mupots.mat')
-            merge_3d = sio.loadmat('/local_scratch/wguo/repos/GraphRefineNet/gr-net/data/MuPoTS_skeleton/eval/eval_result/posenet02101043/preds_3d_kpt_mupots.mat')
-
-            for key in merge_2d:
-                if key not in pred_2d_save:
-                    pred_2d_save[key] = merge_2d[key]
-                    pred_3d_save[key] = merge_3d[key]
-
-            #print("pred_3d_save:", pred_3d_save)
-            t = str(datetime.datetime.now().strftime("%Y%m%d_%H%M"))
-            if preds_copain is not None:
-                output_path = osp.join(cfg.result_dir, t+ '_preds_2d_kpt_mupots_mean.mat')
-            else:
-                output_path = osp.join(cfg.result_dir, t+ '_preds_2d_kpt_mupots.mat')
-            sio.savemat(output_path, pred_2d_save)
-            print("Testing result is saved at " + output_path)
-            if preds_copain is not None:
-                output_path = osp.join(cfg.result_dir, t+ '_preds_3d_kpt_mupots_mean.mat')
-            else:
-                output_path = osp.join(cfg.result_dir, t+ '_preds_3d_kpt_mupots.mat')
-            sio.savemat(output_path, pred_3d_save)
-            print("Testing result is saved at " + output_path)
-        #return error_img
-
     def evaluate_cam_list(self, preds, preds_list=None, save_mat_result=False):
         # test for cam output
         # used when input_img (nb_person not certain, not a pair)
         # used in test.py(save_mat_result=True)
 
-        #print('Evaluation start...')
         gts = self.load_data()#self.data
         sample_num = len(preds)
         joint_num = self.original_joint_num
@@ -386,17 +185,13 @@ class MuPoTS_skeleton:
         pred_3d_per_bbox = {}
         pred_2d_save = {}
         pred_3d_save = {}
-        #pred_3d_save_tmp = {}
 
         for n in range(sample_num):
             gt = gts[n]
             bbox = gt['bbox']
             gt_3d_root = gt['root_cam']
             bbox_id = gt['id']
-            #if bbox_id != n:
-            #    print("...error: bbox_id is not n")
 
-            # restore coordinates to original space
             pred_3d_kpt = preds[n].copy()
 
             if str(n) in pred_3d_per_bbox:
@@ -404,29 +199,7 @@ class MuPoTS_skeleton:
             else:
                 pred_3d_per_bbox[str(n)] = [pred_3d_kpt]
 
-            ### COPAIN ###
-            if preds_list is not None:
-                n_list = gt['n_list']#id2pairId[str(n)] # len = nb of instance in same img
-                preds_copain_list = preds_list[n] # len  n - 1
-
-                if len(n_list) == 1: # just self
-                    continue
-
-                for i in range(len(n_list)-1):
-                    n_copain = n_list[i+1]
-                    gt_copain = gts[n_copain]
-                    bbox_copain = gt_copain['bbox']
-                    gt_3d_root_copain = gt_copain['root_cam']
-                    bbox_id_copain = gt_copain['id']
-                    # restore coordinates to original space
-                    pred_3d_kpt_copain = preds_copain_list[i].copy()
-
-                    if str(n_copain) in pred_3d_per_bbox:
-                        pred_3d_per_bbox[str(n_copain)].append(pred_3d_kpt_copain)
-                    else:
-                        pred_3d_per_bbox[str(n_copain)] = [pred_3d_kpt_copain]
-
-        error = np.zeros((sample_num, self.original_joint_num)) # joint error
+                    error = np.zeros((sample_num, self.original_joint_num)) # joint error
         error_pa = np.zeros((sample_num, self.original_joint_num))
         error_seq = {}#[ [] for _ in range(self.nb_test_seq) ] # error for each sequence
         error_seq_pa = {}#[ [] for _ in range(self.nb_test_seq) ]
@@ -437,8 +210,6 @@ class MuPoTS_skeleton:
             bbox = gt['bbox']
             gt_3d_root = gt['root_cam']
             gt_3d_kpt = gt['joint_cam']
-            #gt_3d_kpt_trans = trans2cam(gt['joint_img'],bbox,gt_3d_root,f,c)
-            #print('...mupots480:',gt['joint_cam'], gt['joint_img'], gt_3d_kpt_trans)
             gt_vis = gt['joint_vis']
             bbox_id = gt['id']
             img_name = gt['img_path'].split('/')
@@ -467,7 +238,6 @@ class MuPoTS_skeleton:
             error[n] = np.sqrt(np.sum((pred_3d_kpt - gt_3d_kpt)**2,1))
             error_pa[n] = np.sqrt(np.sum((pred_3d_kpt_pa - gt_3d_kpt)**2,1))
             seq_idx = int(img_name[2:img_name.find('_')])
-            #print("...seq:",seq_idx)
             if str(seq_idx) in error_seq:
                 error_seq[str(seq_idx)].append(error[n].copy())
                 error_seq_pa[str(seq_idx)].append(error_pa[n].copy())
@@ -489,7 +259,6 @@ class MuPoTS_skeleton:
 
         print(eval_summary)
 
-
         if not save_mat_result:
             return tot_err, tot_err_pa
         else:
@@ -508,19 +277,7 @@ class MuPoTS_skeleton:
             with open(txt_path, 'w') as w:
                 w.write(''.join(result))
 
-
             ### prediction save for calculating pck
-            # merge blank seq
-            '''
-            merge_2d = sio.loadmat('/local_scratch/wguo/repos/GraphRefineNet/gr-net/data/MuPoTS/eval/eval_result/posenet02101043/preds_2d_kpt_mupots.mat')
-            merge_3d = sio.loadmat('/local_scratch/wguo/repos/GraphRefineNet/gr-net/data/MuPoTS/eval/eval_result/posenet02101043/preds_3d_kpt_mupots.mat')
-
-            for key in merge_2d:
-                if key not in pred_2d_save:
-                    pred_2d_save[key] = merge_2d[key]
-                    pred_3d_save[key] = merge_3d[key]
-            '''
-            #print("pred_3d_save:", pred_3d_save)
             t = str(datetime.datetime.now().strftime("%Y%m%d_%H%M"))
             output_path = osp.join(cfg.result_dir, t+ '_preds_2d_kpt_mupots.mat')
             sio.savemat(output_path, pred_2d_save)

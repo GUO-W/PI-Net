@@ -1,3 +1,12 @@
+##
+## Software PI-Net: Pose Interacting Network for Multi-Person Monocular 3D Pose Estimation
+## Copyright Inria and Polytechnic University of Catalonia  [to be checked] (do the other people you collaborate come from this university ?)
+## Year 2021
+## Contact : wen.guo@inria.fr
+##
+## The software PI-Net is provided under MIT License.
+##
+
 #used in train for skeleton input
 import os
 import os.path as osp
@@ -30,8 +39,6 @@ def larger_bbox(bbox):
 class MuCo:
     def __init__(self, data_split, is_val):
         self.data_split = data_split
-        #self.img_dir = osp.join('..', 'data', 'MuCo', 'data')
-        #self.train_annot_path = osp.join('..', 'data', 'MuCo', 'data', 'MuCo-3DHP.json')
         self.img_dir = osp.join(cfg.data_dir, 'MuCo', 'data')
         self.train_annot_path = cfg.train_annot_path
         self.val_annot_path = cfg.val_annot_path
@@ -50,21 +57,13 @@ class MuCo:
 
         if self.data_split == 'train':
             db = COCO(self.train_annot_path)
-        #else:
-        #    db = COCO(self.val_annot_path)
-            #print('Unknown data subset')
-            #assert 0
 
         data = []
         id2pairId = json.load(open(self.pair_index_path,'r'))
         n = 0
 
         for aid in db.anns.keys():
-            #print("aid:",aid)
             ann = db.anns[aid]
-            #if ann['is_valid'] == 0:
-            #    print("...is valid")
-            #    continue
 
             image_id = ann['image_id']
             img = db.loadImgs(image_id)[0]
@@ -87,8 +86,6 @@ class MuCo:
             bbox = np.array(ann['bbox'])
             img_width, img_height = img['width'], img['height']
 
-			# sanitize bboxes
-            #print("...bbox process")
             x, y, w, h = bbox
             center = [x+w/2, y+h/2]
             x1 = np.max((0, x))
@@ -101,7 +98,6 @@ class MuCo:
                 print("sanitize bboxes:",image_id)
                 continue
 
-            # aspect ratio preserving bbox
             bbox = larger_bbox(bbox)
 
             n_copain = id2pairId[str(bbox_id)] - bbox_id + n # n_copain - n = id_copain - id
@@ -115,8 +111,6 @@ class MuCo:
                 dis = math.sqrt((center[0] - center_cand[0])**2 + (center[1] - center_cand[1])**2)
                 dis2id[dis] = cand_id
             id_list_sorted = [dis2id[k] for k in sorted(dis2id.keys())]
-            #print("...132:", [(dis2id[k], k)for k in sorted(dis2id.keys())])
-            #n_list = id_list_sorted - bbox_id + n
             for cand_id in id_list_sorted:
                 n_list.append(cand_id - bbox_id + n)
 
@@ -145,7 +139,6 @@ class MuCo:
         # test for img output, use in test.py
         # add posenet 3d cam result to gt file as 'MuPoTS-3D_with_posenet_result.json', add key 'keypoints_cam_posenet'
 
-        #print('Evaluation start...')
         gts = self.load_data()#self.data
         sample_num = len(preds)
         joint_num = self.joint_num
@@ -153,9 +146,8 @@ class MuCo:
         pred_2d_per_bbox = {}
         pred_2d_save = {}
         pred_3d_save = {}
-        #pred_3d_save_tmp = {}
 
-        gt_dict_orig = json.load(open('/local_scratch/wguo/repos/3DMPPE/posenet_gr/data/MuCo/data/annotations/MuCo-3DHP.json','r'))
+        gt_dict_orig = json.load(open('data/MuCo/data/annotations/MuCo-3DHP.json','r'))
         gt_dict = gt_dict_orig
 
         for n in range(sample_num):
@@ -165,12 +157,8 @@ class MuCo:
             bbox_id = gt['id']
             f = gt['f']
             c = gt['c']
-            #if bbox_id != n:
-            #    print("...error: bbox_id is not n")
 
-            # restore coordinates to original space
             pred_2d_kpt = preds[n].copy()
-            #pred_2d_kpt = np.take(pred_2d_kpt, self.eval_joint, axis=0)
             pred_2d_kpt = warp_coord_to_original(pred_2d_kpt, bbox, gt_3d_root)
 
             if str(n) in pred_2d_per_bbox:
@@ -185,12 +173,8 @@ class MuCo:
 			### add posenet 3d cam result to gt file as 'MuCo_with_posenet_result.json', add key 'keypoints_cam_posenet'
             gt_dict['annotations'][int(bbox_id)]['keypoints_cam_posenet'] = pred_3d_kpt.tolist()
 
-        # filter.py
-        #for anno in gt_dict['annotations']:
-        #    if 'keypoints_cam_posenet' not in anno.keys():
-        #        del anno
 
-        with open('/local_scratch/wguo/repos/3DMPPE/posenet_gr/data/MuCo/MuCo_with_posenet_result.json','w') as w:
+        with open('data/MuCo/MuCo_with_posenet_result.json','w') as w:
             json.dump(gt_dict, w)
 
 

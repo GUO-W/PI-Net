@@ -1,3 +1,12 @@
+##
+## Software PI-Net: Pose Interacting Network for Multi-Person Monocular 3D Pose Estimation
+## Copyright Inria and Polytechnic University of Catalonia  [to be checked] (do the other people you collaborate come from this university ?)
+## Year 2021
+## Contact : wen.guo@inria.fr
+##
+## The software PI-Net is provided under MIT License.
+##
+
 import os
 import os.path as osp
 import sys
@@ -5,15 +14,8 @@ import numpy as np
 
 class Config:
 
-    ## dataset
-    # training set
-    # 3D: Human36M, MuCo
-    # 2D: MSCOCO, MPII
-    # Note that list must consists of one 3D dataset (first element of the list) + several 2D datasets
-    trainset = ['MuCo']#['MuPoTS_skeleton']#['MuCo']
+    trainset = ['MuCo']
 
-    # testing set
-    # Human36M, MuPoTS, MSCOCO
     testset = 'MuPoTS_skeleton'
 
     ## directory
@@ -37,12 +39,10 @@ class Config:
 
     ## DATA
     nb_test_seq = 4
-    #nb_crossval_split = 1
     pair_index_path_muco = osp.join(data_dir, trainset[0], 'data','annotations/MuCo_id2pairId.json')
     pair_index_path =  osp.join(data_dir, testset, 'data', 'MuPoTS-3D_id2pairId.json')
 
-    train_annot_path = osp.join(data_dir, trainset[0], 'data','annotations/MuCo-3DHP_with_posenent_result_filter.json') ###TODO)#'annotations_crossval', 'mupots_crossval_train' + str(nb_crossval_split) + '.json')
-    #val_annot_path = osp.join(data_dir, testset, 'data', 'annotations_crossval', 'mupots_crossval_val' + str(nb_crossval_split) + '.json')
+    train_annot_path = osp.join(data_dir, trainset[0], 'data','annotations/MuCo-3DHP_with_posenent_result_filter.json')
     val_annot_path = osp.join(data_dir, testset, 'data',  'MuPoTS-3D_with_posenet_result.json') #'MuPoTS-3D.json')
 
     ## training config
@@ -116,7 +116,6 @@ class Config:
 
         print('>>> Using GPU: {}'.format(self.gpu_ids))
         print ('>>> bz: {}, lr: {}, snapshot: {}'.format(self.batch_size, self.lr, self.snapshot_iter))
-        #print ('>>> nb_crossval_split: {}'.format(self.nb_crossval_split))
 
 cfg = Config()
 print ('>>> path:', cfg.cur_dir)

@@ -1,3 +1,12 @@
+##
+## Software PI-Net: Pose Interacting Network for Multi-Person Monocular 3D Pose Estimation
+## Copyright Inria and Polytechnic University of Catalonia  [to be checked] (do the other people you collaborate come from this university ?)
+## Year 2021
+## Contact : wen.guo@inria.fr
+##
+## The software PI-Net is provided under MIT License.
+##
+
 import json
 import os
 

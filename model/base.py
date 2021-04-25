@@ -1,3 +1,6 @@
+
+
+
 import os
 import os.path as osp
 import math
@@ -38,12 +41,8 @@ class PadCollate:
             xs - a tensor of all examples in the batch after padding
             ys - a tensor of all labels in batch
         """
-        #input_tensors, gt_tensors, joint_vis_tensors, lengths = [], [], [], []
         input_tensors, joint_cam_tensors, joint_vis_tensors, joints_have_depth_tensors, lengths =[], [], [], [], []
-        #if random.random() < self.shuffle_rate:
-        #    self.shuffle_batch(batch)  # shuffle the bounding boxes during training
         for i, inp in enumerate(batch):
-            #print("...base44:", inp)
             if len(inp) == 4:
                 input_pair, joint_cam_pair, joint_vis_pair, joints_have_depth = inp #train #inpt, targt = inp
                 input_pair = torch.Tensor(input_pair)
@@ -51,8 +50,6 @@ class PadCollate:
                 joint_cam_tensors.append(torch.Tensor(joint_cam_pair))
                 joint_vis_tensors.append(torch.Tensor(joint_vis_pair))
                 joints_have_depth_tensors.append(torch.Tensor(joints_have_depth))
-                #print("...54:", input_pair.size(0)/17)
-                #print(input_pair.shape)
                 lengths.append(input_pair.size(0)/17)
             else:
                 input_pair = inp  #test
@@ -62,13 +59,10 @@ class PadCollate:
 
         lengths = torch.as_tensor(lengths, dtype=torch.int64, device="cpu")
         padded_input = pad_sequence(input_tensors, batch_first=True)
-        #print(padded_input.size())
-        #print(lengths.size())
         if len(joint_cam_tensors) != 0:
             padded_joint_cam = pad_sequence(joint_cam_tensors, batch_first=True)#, padding_value=-1)
             padded_joint_vis = pad_sequence(joint_vis_tensors, batch_first=True)#, padding_value=-1)
             padded_joint_have_depth = pad_sequence(joints_have_depth_tensors, batch_first=True)#, padding_value=-1)
-            #padded_target = pad_sequence(target_tensors, batch_first=True, padding_value=-1)  # padding tag is target = -1
             return padded_input, padded_joint_cam, padded_joint_vis,padded_joint_have_depth, lengths
         else:
             return padded_input,lengths

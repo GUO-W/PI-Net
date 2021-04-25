@@ -1,3 +1,12 @@
+##
+## Software PI-Net: Pose Interacting Network for Multi-Person Monocular 3D Pose Estimation
+## Copyright Inria and Polytechnic University of Catalonia  [to be checked] (do the other people you collaborate come from this university ?)
+## Year 2021
+## Contact : wen.guo@inria.fr
+##
+## The software PI-Net is provided under MIT License.
+##
+
 import numpy as np
 import cv2
 import random
@@ -33,7 +42,6 @@ class DatasetLoader(Dataset):
 
         self.pair_index_path = db.pair_index_path
 
-        #print("db len:",self.__len__())
     def __getimg__(self, index):
 
         joint_num = self.joint_num
@@ -50,7 +58,6 @@ class DatasetLoader(Dataset):
         gt_3D_root = data['root_cam']
         f = data['f']
         c = data['c']
-        #pair_index = data['n_copain']
         id_list = data['n_list'] # instances in same img (from near to far) , including itself
 
         joint_img = data['joint_img']
@@ -58,29 +65,18 @@ class DatasetLoader(Dataset):
         joint_vis = data['joint_vis']
 
         joint_cam_posenet = data['joint_cam_posenet']
-        #noise = np.array(data['noise'])
-
-        # 1. load image
 
         cvimg = cv2.imread(data['img_path'], cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
         if not isinstance(cvimg, np.ndarray):
             raise IOError("Fail to read %s" % data['img_path'])
         img_height, img_width, img_channels = cvimg.shape
 
-
-        # 2. get augmentation params
-        #if self.do_augment:
-        #    scale, rot, do_flip, color_scale, do_occlusion = get_aug_config()
-        #else:
         scale, rot, do_flip, color_scale, do_occlusion = 1.0, 0.0, False, [1.0, 1.0, 1.0], False
 
-        # 3. crop patch from img and perform data augmentation (flip, rot, color scale, synthetic occlusion)
         img_patch, trans = generate_patch_image(cvimg, bbox, do_flip, scale, rot, do_occlusion)
         for i in range(img_channels):
             img_patch[:, :, i] = np.clip(img_patch[:, :, i] * color_scale[i], 0, 255)
 
-        # 4. generate patch joint ground truth
-        # flip joints and apply Affine Transform on joints
         if do_flip:
             joint_img[:, 0] = img_width - joint_img[:, 0] - 1
             for pair in flip_pairs:
@@ -103,8 +99,6 @@ class DatasetLoader(Dataset):
         joint_img[:, 1] = joint_img[:, 1] / cfg.input_shape[0] * cfg.output_shape[0]
         joint_img[:, 2] = joint_img[:, 2] * cfg.depth_dim
 
-        #joint_cam = trans2cam(joint_img, bbox, gt_3D_root, f, c)
-
         if self.is_train:
             img_patch = self.transform(img_patch)
 
@@ -123,18 +117,15 @@ class DatasetLoader(Dataset):
             return id_list,img_patch, bbox, gt_3D_root, f, c, joint_img, joint_cam, joint_cam_posenet, joint_vis, joints_have_depth, None#noise
         else:
             img_patch = self.transform(img_patch)
-            #img_pair = [img_patch,img_patch]
             return img_id, img_path, id_list, img_patch, bbox, gt_3D_root, f, c, joint_img, joint_cam, joint_cam_posenet, None# noise
 
     def __getitem__(self, index):
         if self.is_train:
-            #pair_index, img_patch, bbox, root, f, c, joint_img, joint_cam, joint_cam_posenet, joint_vis, joints_have_depth, noise = self.__getimg__(index)
             id_list, _, _, _, _, _, _, joint_cam, joint_cam_posenet, joint_vis, joints_have_depth, _ = self.__getimg__(index)
             if index != id_list[0]:
                 print("...ERROR!! dataset.py lin134, IN generating id_list in the img")
             if len(id_list)==1:
                 id_list = [index,index]
-                #print("...ERROR!! dataset.py lin136, IN generating id_list in the img:only one instance exits in certain img")
 
             joint_cam_posenet_pair, joint_cam_pair, joint_vis_pair = joint_cam_posenet[:17,], joint_cam[:17,], joint_vis[:17,]
             for pair_index in id_list[1:]:
@@ -145,7 +136,6 @@ class DatasetLoader(Dataset):
 
             vis = False#True
             if vis:
-                #vis_patch_data(img_patch, joint_cam, joint_cam_noise_1, joint_cam_noise_2)
                 vis_patch_data(img_patch, joint_img_noise_1, joint_img, joint_img_m)
 
             return joint_cam_posenet_pair,\
@@ -165,7 +155,6 @@ class DatasetLoader(Dataset):
                 joint_cam_pair = np.concatenate((joint_cam_pair, joint_cam_m), axis=0)
                 joint_cam_posenet_pair = np.concatenate((joint_cam_posenet_pair, joint_cam_posenet_m), axis=0)
 
-            #print("...",joint_cam_posenet_pair.shape)
             if cfg.vis_A:
                 return img_id, img_path, bbox_pair, joint_cam_pair, joint_cam_posenet_pair
             else:
@@ -229,7 +218,6 @@ def add_random_noise(A,noise):
     #keypoint_mask = np.repeat(keypoint_mask, 3, axis=-1)
     #shift = noise[3] * keypoint_mask #np.random.rand(17,3) * keypoint_mask
     shift = np.array(noise[3]) * 100
-    #print("...shift:", shift)
     A2 = A + shift
     return A2 #joint_noise
 
@@ -241,8 +229,6 @@ def vis_patch_data(img_patch, gt, pose1, pose2):
 
     order0 = [0,16,1,2,3,1,5,6,1,15,14,11,12,14,8,9]
     order1 = [16,1,2,3,4,5,6,7,15,14,11,12,13,8,9,10]
-    #limbs = [head,       neck,      R_slder, RUp_arm,   RLow_arm,  L_slder,  LUp_arm,   LLow_arm, spine,  \
-            #pelvis,   R_hip,  RUp_leg,  RLow_leg,  L_hip, LUp_leg,    LLow_leg]
     color =  ['darkgreen','seagreen','black', 'dimgray', 'dimgrey','skyblue','royalblue','navy','darkcyan',\
             'darkgreen','gray','darkgray','darkgrey','c',   'dodgerblue','navy']
 

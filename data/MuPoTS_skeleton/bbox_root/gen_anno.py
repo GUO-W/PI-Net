@@ -1,8 +1,11 @@
-# generate bbox_root_mupots_gt for graphU pose refine
-#[{"image_id": 0, 
-#  "root_cam": [-298.9688720703125, 121.402099609375, 3007.0224609375], 
-#  "bbox":     [464.4206237792969, 164.09814453125, 818.8088989257812, 818.8088989257812], 
-
+##
+## Software PI-Net: Pose Interacting Network for Multi-Person Monocular 3D Pose Estimation
+## Copyright Inria and Polytechnic University of Catalonia  [to be checked] (do the other people you collaborate come from this university ?)
+## Year 2021
+## Contact : wen.guo@inria.fr
+##
+## The software PI-Net is provided under MIT License.
+##
 import json
 
 with open("../data/MuPoTS-3D.json",'r') as f1:
@@ -17,7 +20,7 @@ for i in range(len(data_dict['annotations'])):
     bbox_root_dict['image_id'] = data_dict['annotations'][i]['image_id']
     bbox_root_dict['bbox'] = data_dict['annotations'][i]['bbox']
     bbox_root_dict['root_cam'] = data_dict['annotations'][i]['keypoints_cam'][14] #pelvis
-    bbox_root_list.append(bbox_root_dict) 
+    bbox_root_list.append(bbox_root_dict)
 
 
 with open("bbox_root_mupots_gt.json",'w') as f2:

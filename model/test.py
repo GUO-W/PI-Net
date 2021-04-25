@@ -1,4 +1,11 @@
-# python test.py --gpu 0 --bz 4 --lr 1e-6 --test_epoch 25 --data 10m
+##
+## Software PI-Net: Pose Interacting Network for Multi-Person Monocular 3D Pose Estimation
+## Copyright Inria and Polytechnic University of Catalonia  [to be checked] (do the other people you collaborate come from this university ?)
+## Year 2021
+## Contact : wen.guo@inria.fr
+##
+## The software PI-Net is provided under MIT License.
+##
 
 import argparse
 from tqdm import tqdm
@@ -83,8 +90,6 @@ def main():
         tester._make_model()
 
         preds = []
-        preds_copain = []
-
         with torch.no_grad():
             for itr, inp in enumerate(tqdm(tester.batch_generator)):
                 #img_id, img_path, bbox_pair, joint_cam_pair, joint_cam_noise_pair = inp
@@ -98,17 +103,10 @@ def main():
                 coord_out = coord_out.cpu().numpy()
                 coord_out_0 = coord_out[:,:17] #1*17*3
                 preds.append(coord_out_0)
-
-                n = int(len(coord_out[0])/17) # n=2 when inputpair
-                coord_out_1 = coord_out[:,17:] # 1 * 17(n-1) * 3
-                coord_out_1 = np.resize(coord_out_1, (n-1,17,3)) # (n-1) * 17 * 3
-                preds_copain.append(coord_out_1)
-
         print("......pred done")
 
         # evaluate
         preds = np.concatenate(preds, axis=0)
-        preds_copain = np.concatenate(preds_copain, axis=0)
         print("......evaluate")
         tester.testset.evaluate_cam_list(preds,save_mat_result=True)
         print("......evaluate done")
