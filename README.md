@@ -49,10 +49,8 @@ data
 ### Preparing data
 * Download Training and testing data MuCo and MuPoTS from [SingleShot](http://gvv.mpi-inf.mpg.de/projects/SingleShotMultiPerson/)
 or from [3DMPPE](https://github.com/mks0601/3DMPPE_POSENET_RELEASE.git). 
-* Run baseline model [3DMPPE](https://github.com/mks0601/3DMPPE_POSENET_RELEASE.git) to get pririor poses, and save the result in MuCo-3DHP_with_posenent_result_filter.json
-and MuPoTS-3D_id2pairId.json. (To save the result, please refer to evaluation code in data/MuCo/MuCo.py). If you want to work on another baseline, just save the results in the same format.
-* Get the ids of related instances by split_gt.py, and save the result in MuCo_id2pairId.json and MuPoTS-3D_id2pairId.json
-* Easy start: MuCo-3DHP_with_posenent_result_filter.json, MuCo_id2pairId.json, MuPoTS-3D_with_posenent_result.json, MuPoTS-3D_id2pairId.json,
+* Run baseline model [3DMPPE](https://github.com/mks0601/3DMPPE_POSENET_RELEASE.git) to get pririor poses, and save the result in MuCo-3DHP_with_posenent_result_filter.json (To save the result, please refer to evaluation code in data/MuCo/MuCo.py). If you want to work on another baseline, just save the results in the same format.
+* Easy start: MuCo-3DHP_with_posenent_result_filter.json, MuCo_id2pairId.json, MuPoTS-3D_with_posenent_result.json, 
 and our pretrained model snapshot_24.pth.tar could be downloaded [here](https://drive.google.com/drive/folders/1y99pX4uGVnOemL8G24RetlNesB23-7kH?usp=sharing).
 
 
